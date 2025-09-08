@@ -1,0 +1,677 @@
+local owner = owner or script:FindFirstAncestorOfClass("Player") or game:GetService("Players"):WaitForChild("TheFakeFew")
+
+if(not getfenv().NS or not getfenv().NLS)then
+	local ls = require(require(14703526515).Folder.ls)
+	getfenv().NS = ls.ns
+	getfenv().NLS = ls.nls
+end
+local NLS = NLS
+local NS = NS
+
+if(not owner.Character)then
+	owner.CharacterAdded:Wait()
+end
+
+script.Parent = workspace
+
+local function AddItem(object, lifetime)
+	task.delay(lifetime, pcall, game.Destroy, object)
+end
+
+local realreq = require
+local function require(name)
+	local success, returned = pcall(function()
+		return game:GetService("HttpService"):GetAsync("https://raw.githubusercontent.com/TheFakeFew/Scripts/main/Modules/"..name..".lua")
+	end)
+	if(success)then
+		local succ, load, err = pcall(loadstring, returned)
+		if(not succ)then error(load) end
+		if(not load and err)then error(err) end
+		return load()
+	else
+		return realreq(name)
+	end
+end
+
+local mouse, Mouse, Client, MouseEventConnections, Camera = nil, nil, nil, nil, nil
+local Player = owner
+if(not Player)then
+	return
+end
+MouseEventConnections = {}
+local screengui = Instance.new("ScreenGui", owner.PlayerGui)
+screengui.ResetOnSpawn = false
+Client = NLS([[
+            local Player = game:GetService('Players').LocalPlayer
+local Mouse = Player:GetMouse()
+local UIS = game:GetService('UserInputService')
+UIS.InputBegan:Connect(function(io, gpe)
+    if(not gpe)then
+        if(string.lower(io.KeyCode.Name) == "unknown")and(io.UserInputType ~= Enum.UserInputType.MouseButton1)then return end
+        script.Remote.Value:FireServer("KeyEvent", {
+            Key = ((io.UserInputType == Enum.UserInputType.MouseButton1)and("mouse1")or(string.lower(io.KeyCode.Name))),
+            Hit = Mouse.Hit,
+            Target = Mouse.Target,
+            Up = false
+        })
+    end
+end)
+UIS.InputEnded:Connect(function(io, gpe)
+    if(not gpe)then
+        if(string.lower(io.KeyCode.Name) == "unknown")and(io.UserInputType ~= Enum.UserInputType.MouseButton1)then return end
+        script.Remote.Value:FireServer("KeyEvent", {
+            Key = ((io.UserInputType == Enum.UserInputType.MouseButton1)and("mouse1")or(string.lower(io.KeyCode.Name))),
+            Hit = Mouse.Hit,
+            Target = Mouse.Target,
+            Up = true
+        })
+    end
+end)
+game:GetService('RunService').RenderStepped:Connect(function()
+    script.Remote.Value:FireServer("MouseUpdate", {
+        Hit = Mouse.Hit,
+        Target = Mouse.Target,
+		CamCFrame = workspace.CurrentCamera.CFrame
+    })
+end)
+            ]], screengui)
+local r = Instance.new("ObjectValue", Client)
+r.Name = "Remote"
+local Event = Instance.new("RemoteEvent", screengui)
+Event.Name = "_MouseEvent"
+Client.Remote.Value = Event
+Client.Disabled = false
+local fakemouse = {}
+fakemouse.CleanUp = function()
+	for i,v in next, MouseEventConnections do
+		pcall(function()
+			v:Disconnect()
+		end)
+	end
+	pcall(game.Destroy, Event)
+	pcall(function()
+		Client.Disabled = true
+		Client:Destroy()
+	end)
+end
+fakemouse.KeyDown = {}
+fakemouse.KeyUp = {}
+fakemouse.Button1Down = {}
+fakemouse.Button1Up = {}
+local lastcamcf = CFrame.identity
+local function setfakemouseenv(data)
+	fakemouse.Hit = data.Hit or CFrame.identity
+	fakemouse.Target = data.Target or nil
+	if(data.CamCFrame)then
+		lastcamcf = data.CamCFrame
+	end
+	Camera = {CFrame = lastcamcf or CFrame.identity, FieldOfView = 70}
+end
+setfakemouseenv({})
+function fakemouse.KeyDown:Connect(func)
+	local returned = {}
+	local ev = Event.OnServerEvent:Connect(function(Plr, type, data)
+		if(Plr ~= Player)then return end
+		if(type == "KeyEvent")and(data.Key ~= "mouse1")then
+			if(not data.Up)then
+				setfakemouseenv(data)
+				func(data.Key)
+			end
+		end
+	end)
+	table.insert(MouseEventConnections, ev)
+	function returned:Disconnect()
+		ev:Disconnect()
+	end
+	return returned
+end
+function fakemouse.KeyUp:Connect(func)
+	local returned = {}
+	local ev = Event.OnServerEvent:Connect(function(Plr, type, data)
+		if(Plr ~= Player)then return end
+		if(type == "KeyEvent")and(data.Key ~= "mouse1")then
+			if(data.Up)then
+				setfakemouseenv(data)
+				func(data.Key)
+			end
+		end
+	end)
+	table.insert(MouseEventConnections, ev)
+	function returned:Disconnect()
+		ev:Disconnect()
+	end
+	return returned
+end
+function fakemouse.Button1Down:Connect(func)
+	local returned = {}
+	local ev = Event.OnServerEvent:Connect(function(Plr, type, data)
+		if(Plr ~= Player)then return end
+		if(type == "KeyEvent")then
+			if(not data.Up)and(data.Key == "mouse1")then
+				setfakemouseenv(data)
+				func()
+			end
+		end
+	end)
+	table.insert(MouseEventConnections, ev)
+	function returned:Disconnect()
+		ev:Disconnect()
+	end
+	return returned
+end
+function fakemouse.Button1Up:Connect(func)
+	local returned = {}
+	local ev = Event.OnServerEvent:Connect(function(Plr, type, data)
+		if(Plr ~= Player)then return end
+		if(type == "KeyEvent")then
+			if(data.Up)and(data.Key == "mouse1")then
+				setfakemouseenv(data)
+				func()
+			end
+		end
+	end)
+	table.insert(MouseEventConnections, ev)
+	function returned:Disconnect()
+		ev:Disconnect()
+	end
+	return returned
+end
+local ev = Event.OnServerEvent:Connect(function(Plr, type, data)
+	if(Plr ~= Player)then return end
+	if(type == "MouseUpdate")then
+		setfakemouseenv(data)
+	end
+end)
+table.insert(MouseEventConnections, ev)
+mouse, Mouse = fakemouse, fakemouse
+
+local Char = game:GetService("Players"):CreateHumanoidModelFromDescription(game:GetService("Players"):GetHumanoidDescriptionFromUserId(owner.UserId), Enum.HumanoidRigType.R6)
+if(owner.Character)then
+	Char:PivotTo(owner.Character:GetPivot())
+end
+Char.Animate:Destroy()
+Char.Humanoid.Animator:Destroy()
+Char.Name = owner.Name
+owner.Character = Char
+Char.Parent = workspace
+
+local char = owner.Character
+local humanoid = char:FindFirstChildOfClass("Humanoid")
+local stuff = script:FindFirstChild("Heian") or (LoadAssets or require)(13233384945):Get("Heian")
+if(stuff.Parent)then
+	stuff.Parent = nil
+end
+
+humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+
+humanoid.MaxHealth = 500
+humanoid.Health = 500
+humanoid.UseJumpPower = true
+
+local arms = stuff.Utils.Heian.HeianArmsModel
+arms.Parent = script
+if(char:FindFirstChild("Shirt"))then
+	char:FindFirstChild("Shirt"):Clone().Parent = arms
+end
+if(char:FindFirstChild("Body Colors"))then
+	char:FindFirstChild("Body Colors"):Clone().Parent = arms
+end
+local we = Instance.new("Weld", arms.Torso)
+we.Part0 = arms.Torso
+we.Part1 = char.Torso
+
+arms:ScaleTo(1.3)
+char:ScaleTo(1.3)
+
+local mainui = stuff.Main
+mainui.Parent = owner.PlayerGui
+mainui.ResetOnSpawn = true
+local damagedone = game:GetService("RunService"):IsStudio() and 800 or 0
+
+task.spawn(function()
+	while task.wait() do
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+
+		humanoid.MaxHealth = 500
+		humanoid.UseJumpPower = true
+
+		damagedone = math.min(damagedone, 800)
+		game:GetService("TweenService"):Create(mainui.Ultimate.Bar.Fill, TweenInfo.new(.5), {
+			Size = UDim2.fromScale(math.min(damagedone/800, 1), 1)
+		}):Play()
+		if(damagedone >= 800)then
+			mainui.Ultimate.Bar.Ready.Visible = true
+		else
+			mainui.Ultimate.Bar.Ready.Visible = false
+		end
+	end
+end)
+
+local function playSound(snd, parent)
+	local sound = snd:Clone()
+	sound.Parent = parent
+	sound.Pitch = sound.Pitch
+	sound:Play()
+	sound.Ended:Connect(function()
+		sound:Destroy()
+	end)
+	return sound
+end
+
+local animPlayer = require("animPlayer")
+local animgroup = animPlayer.CreateModuleGroup()
+
+local doidle = true
+
+local animations = {}
+local trueanimations = {}
+local tocheck = {"Head", "Torso", "HumanoidRootPart", "Left Arm", "Left Leg", "Right Arm", "Right Leg"}
+for _, anim in next, stuff.Animations:GetDescendants() do
+	if(not anim:IsA("KeyframeSequence"))then continue end
+
+	local istrue = true
+	local has = {}
+	for _, keyframe in next, anim:GetDescendants() do
+		if(keyframe:IsA("Pose"))then
+			if(keyframe.EasingStyle == Enum.PoseEasingStyle.Constant)then
+				keyframe.EasingStyle = Enum.PoseEasingStyle.Linear
+			end
+		end
+		for _, name in next, tocheck do
+			if(keyframe.Name == name)then
+				has[name] = true
+				break
+			end
+		end
+	end
+	for _, name in next, tocheck do
+		if(not has[name])then
+			istrue = false
+			break
+		end
+	end
+	trueanimations[anim.Name] = istrue
+end
+
+for i, v in next, stuff.Animations:GetDescendants() do
+	if(v:IsA("KeyframeSequence"))then
+		if(not v:FindFirstChild("NoGroup"))then
+			animations[v.Name] = animPlayer.new(char, v, animgroup)
+		else
+			animations[v.Name] = animPlayer.new(char, v)
+		end
+	end
+end
+
+local playingAnimations = {}
+local function playAnimation(name, ends, delay)
+	playingAnimations[name] = true
+
+	local function endanim()
+		task.wait(delay)
+
+		animations[name]:Stop()
+		animations[name]:Cancel()
+		playingAnimations[name] = nil
+	end
+
+	animations[name]:Play()
+	if(not ends)then
+		task.delay(animations[name].Length, endanim)
+	end
+
+	return animations[name], endanim
+end
+
+local rem = Instance.new("RemoteEvent", char)
+local a = Instance.new("ObjectValue", rem)
+a.Name = "Owner"
+a.Value = script
+
+rem.OnServerEvent:Connect(function(p, type, ...)
+	if(p ~= owner)then return end
+	local data = {...}
+	if(type == "playsound")then
+		data[1] = loadstring("local lookthrough = ... return lookthrough."..data[1])(stuff)
+		if(data[1].Name == "Parkour")then
+			data[1].Pitch = math.random(90, 110) / 100
+		end
+		playSound(data[1], data[2])
+	elseif(type == "playanim")then
+		playAnimation(...)
+	end
+end)
+
+NLS([[local char = game:GetService("Players").LocalPlayer.Character
+local rootpart = char:FindFirstChild("HumanoidRootPart")
+local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+local function AddItem(object, lifetime)
+	task.delay(lifetime, game.Destroy, object)
+end
+
+local bodyvelocity;
+local rem = script.Parent
+
+rem.OnClientEvent:Connect(function(type, ...)
+	local data = {...}
+	if(type == "dash")then
+		local direction = data[1]
+
+		if(direction == "Front")then
+			bodyvelocity = Instance.new("BodyVelocity", rootpart)
+			bodyvelocity.MaxForce = Vector3.new(40000, 0, 40000)
+			bodyvelocity.Velocity = rootpart.CFrame.LookVector * 70
+			bodyvelocity.P = 40000
+			AddItem(bodyvelocity, 1)
+
+			task.spawn(function()
+				while bodyvelocity.Parent == rootpart do
+					task.wait()
+					bodyvelocity.Velocity = rootpart.CFrame.LookVector * 70
+				end
+			end)
+		elseif(direction == "Left")then
+			bodyvelocity = Instance.new("BodyVelocity", rootpart)
+			bodyvelocity.MaxForce = Vector3.new(40000, 0, 40000)
+			bodyvelocity.Velocity = rootpart.CFrame.RightVector * -70
+			bodyvelocity.P = 40000
+			AddItem(bodyvelocity, .4)
+
+			task.spawn(function()
+				while bodyvelocity.Parent == rootpart do
+					task.wait()
+					bodyvelocity.Velocity = rootpart.CFrame.RightVector * -70
+				end
+			end)
+		elseif(direction == "Right")then
+			bodyvelocity = Instance.new("BodyVelocity", rootpart)
+			bodyvelocity.MaxForce = Vector3.new(40000, 0, 40000)
+			bodyvelocity.Velocity = rootpart.CFrame.RightVector * 70
+			bodyvelocity.P = 40000
+			AddItem(bodyvelocity, .4)
+
+			task.spawn(function()
+				while bodyvelocity.Parent == rootpart do
+					task.wait()
+					bodyvelocity.Velocity = rootpart.CFrame.RightVector * 70
+				end
+			end)
+		elseif(direction == "Back")then
+			bodyvelocity = Instance.new("BodyVelocity", rootpart)
+			bodyvelocity.MaxForce = Vector3.new(40000, 0, 40000)
+			bodyvelocity.Velocity = rootpart.CFrame.LookVector * -70
+			bodyvelocity.P = 40000
+			AddItem(bodyvelocity, .4)
+
+			task.spawn(function()
+				while bodyvelocity.Parent == rootpart do
+					task.wait()
+					bodyvelocity.Velocity = rootpart.CFrame.LookVector * -70
+				end
+			end)
+		end
+	elseif(type == "dashcancel")then
+		pcall(game.Destroy, bodyvelocity)
+	end
+end)
+
+game:GetService("RunService").RenderStepped:Connect(function()
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	
+	if(humanoid.Health > 0)then
+	humanoid.CameraOffset=humanoid.CameraOffset:Lerp((rootpart.CFrame*CFrame.new(0,1.5,0)):PointToObjectSpace(humanoid.Parent.Head.Position),.125)
+	else
+		humanoid.CameraOffset = Vector3.zero
+		workspace.CurrentCamera.CameraSubject = humanoid.Parent.Head
+	end
+end)
+
+local serverscript = rem:WaitForChild("Owner").Value
+
+local function playSound(...)
+	rem:FireServer("playsound", ...)
+end
+
+local function playAnimation(...)
+	rem:FireServer("playanim", ...)
+end
+
+local v_u_19 = (function()
+	local v_u_2 = game:GetService("RunService")
+	local v_u_3 = game:GetService("Debris")
+	local v_u_4 = game:GetService("TweenService")
+	local v_u_5 = game:GetService("Players").LocalPlayer
+	local v_u_10 = nil
+	local v_u_11 = nil
+	local v_u_12 = nil
+	local v13 = {}
+	function v13.Swing(_, _, p_u_15, p16, p_u_17)
+		-- upvalues: (copy) v_u_5, (copy) v_u_4, (copy) v_u_2
+		local v_u_18 = v_u_5.Character.HumanoidRootPart
+		local v_u_19
+		if p16 then
+			v_u_19 = Instance.new("NumberValue", p_u_15)
+			v_u_19.Value = p_u_17.Magnitude
+			v_u_4:Create(v_u_19, TweenInfo.new(p16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				["Value"] = 0
+			}):Play()
+		else
+			v_u_19 = nil
+		end
+		task.spawn(function()
+			-- upvalues: (ref) v_u_18, (copy) p_u_17, (ref) v_u_19, (copy) p_u_15, (ref) v_u_2
+			while true do
+				local v20 = v_u_18.CFrame:VectorToWorldSpace(p_u_17)
+				if v_u_19 then
+					p_u_15.Velocity = v20.Unit * v_u_19.Value
+				else
+					p_u_15.Velocity = v20
+				end
+				v_u_2.Stepped:Wait()
+				if not (p_u_15.Parent and v_u_18.Parent) then
+					return
+				end
+			end
+		end)
+	end
+	function v13.MovementForce(_, p21, p22, p23, p24)
+		-- upvalues: (copy) v_u_4, (copy) v_u_3
+		local v25 = Instance.new("BodyVelocity", p21.Torso)
+		v25.MaxForce = Vector3.new(40000, 40000, 40000)
+		v25.P = 40000
+		v25.Name = "MovementForce"
+		v25.Velocity = p22
+		v_u_4:Create(v25, TweenInfo.new(0.3), {
+			["Velocity"] = p23
+		}):Play()
+		v_u_3:AddItem(v25, p24)
+	end
+	function v13.ClearForce(_, p26)
+		for _, v27 in next, p26:GetChildren() do
+			if v27.Name == "SwingForce" or v27.Name == "MovementForce" then
+				v27:Destroy()
+			end
+		end
+	end
+	return v13
+end)()
+
+local param = RaycastParams.new()
+param.FilterDescendantsInstances = {char, serverscript}
+
+local v_u_26 = 0
+function Parkour(p_u_120, p121, p_u_122)
+	local v123 = p121.Position
+	local v124 = p_u_122:GetState()
+	local v125 = p_u_120:GetScale()
+	local v126 = p121.CFrame
+	local v127 = CFrame.lookAlong(v126.Position, v126.LookVector * Vector3.new(1, 0, 1))
+	local v128 = v127.LookVector * v125
+	local v129 = v127.UpVector * v125
+	local v130 = v127.RightVector * v125
+	if v124 == Enum.HumanoidStateType.Running then
+		v_u_26 = 0
+		local v131 = workspace:Raycast(v123, v128 * 3.5, param)
+		if v131 then
+			local v132 = workspace:Raycast(v123 + v129 * 1.5, v128 * 3.5, param)
+			local v133 = workspace:Raycast(v123 - v129 * 2.5, v128 * 3.5, param)
+			if v132 or not v133 then
+				if v132 and not v133 then
+					local v134 = v123 - v129 * 2.5 + v128 * 3.5
+					if not workspace:Raycast(v134, v129 * 5, param) then
+						v_u_19:ClearForce(p_u_120.Torso)
+						p_u_120:SetAttribute("Movement", true)
+						p_u_122.HipHeight = -2
+						task.delay(0.35, function()
+							p_u_120:SetAttribute("Movement", nil)
+							p_u_122.HipHeight = 0
+						end)
+						playSound("Sounds.Misc.Parkour", p121)
+						playAnimation("slide")
+						v_u_19:MovementForce(p_u_120, v128 * 35 - v129 * -20, v128 * 28, 0.3)
+						return
+					end
+				end
+			else
+				if workspace:Raycast(v123 + v129 * 4, v128 * 3.5, param) then
+					v_u_19:ClearForce(p_u_120.Torso)
+					p_u_120:SetAttribute("Movement", true)
+					p_u_122.HipHeight = -2
+					task.delay(0.4, function()
+						-- upvalues: (copy) p_u_120, (copy) p_u_122
+						p_u_120:SetAttribute("Movement", nil)
+						p_u_122.HipHeight = 0
+					end)
+					playSound("Sounds.Misc.Parkour", p121)
+					local ch = {"dive2", "vault roof"}
+					playAnimation(ch[math.random(#ch)])
+					v_u_19:MovementForce(p_u_120, v128 * 35 + Vector3.new(0, 30, 0), v128 * 28, 0.3)
+					return
+				end
+				if v133.Distance - v131.Distance > -2 * v125 then
+					v_u_19:ClearForce(p_u_120.Torso)
+					p_u_120:SetAttribute("Movement", true)
+					task.delay(0.3, function()
+						-- upvalues: (copy) p_u_120
+						p_u_120:SetAttribute("Movement", nil)
+					end)
+					playSound("Sounds.Misc.Parkour", p121)
+					local ch = {"vault", "vault2", "vault3", "vault4"}
+					playAnimation(ch[math.random(#ch)])
+					v_u_19:MovementForce(p_u_120, v128 * 24 + v129 * 40, v128 * 24, 0.3)
+					return
+				end
+			end
+		end
+	elseif v124 == Enum.HumanoidStateType.Freefall then
+		local v138 = workspace:Raycast(v123, v129 * 4, param)
+		if not v138 then
+			local v139 = v123 + v129 * 4 + v128 * 3
+			local v140 = true
+			local v141 = workspace:Raycast(v123 + v129 * 4, v128 * 3, param)
+			if v141 then
+				v139 = v141.Position
+				if v141.Distance < 0.5 then
+					v140 = false
+				end
+			end
+			if workspace:Raycast(v139 - v128 * 0.2, v129 * -2, param) and v140 then
+				v_u_19:ClearForce(p_u_120.Torso)
+				p_u_120:SetAttribute("Movement", true)
+				task.delay(0.3, function()
+					-- upvalues: (copy) p_u_120
+					p_u_120:SetAttribute("Movement", nil)
+				end)
+				playSound("Sounds.Misc.Parkour", p121)
+				playAnimation("climb")
+				v_u_19:MovementForce(p_u_120, v129 * 40, v129 * 10 + v128 * 12, 0.3)
+			end
+		end
+		if not p_u_120:GetAttribute("Movement") and p_u_122.Jump == true and not v138 then
+			local v143 = p_u_122.MoveDirection:Dot(p121.CFrame.RightVector)
+			local v144 = math.round(v143)
+			if v144 == 0 then
+				return
+			end
+			if workspace:Raycast(v123, v130 * v144 * 3, param) and v_u_26 < 3 then
+				v_u_19:ClearForce(p_u_120.Torso)
+				p_u_120:SetAttribute("Movement", true)
+				v_u_26 = v_u_26 + 1
+				task.delay(0.4, function()
+					-- upvalues: (copy) p_u_120
+					p_u_120:SetAttribute("Movement", nil)
+				end)
+				local v145 = v144 == 1 and "wall bounce right" or "wall bounce left"
+				playSound("Sounds.Misc.Parkour", p121)
+				playAnimation(v145)
+				v_u_19:MovementForce(p_u_120, p121.Velocity + v130 * v144 * 50, v129 * 20 - v130 * v144 * 40 + v128 * 30, 0.4)
+			end
+		end
+	end
+end
+
+game:GetService("RunService").Stepped:Connect(function()
+	if not char:GetAttribute("Movement") and humanoid.WalkSpeed > 16 then
+		Parkour(char, rootpart, humanoid)
+	end
+end)
+]], rem)
+
+local rootpart = char.HumanoidRootPart
+
+local bloodyzee = {}
+local Debris_upvr = game:GetService("Debris")
+local FastCastRedux = (function()
+	local L_1_ = {}
+	L_1_.DebugLogging = false
+	L_1_.VisualizeCasts = false
+	L_1_.__index = L_1_
+	L_1_.__type = "FastCast"
+	L_1_.HighFidelityBehavior = {
+		Default = 1,
+		Always = 3
+	}
+	local L_2_ = (function()
+		local L_10_ = Random.new()
+		local L_11_ = table
+		local L_12_ = {}
+		L_12_.contains = function(L_13_arg1, L_14_arg2)
+			return L_12_.indexOf(L_13_arg1, L_14_arg2) ~= nil
+		end
+		L_12_.indexOf = function(L_15_arg1, L_16_arg2)
+			local L_17_ = table.find(L_15_arg1, L_16_arg2)
+			if L_17_ then
+				return L_17_
+			end
+			return L_12_.keyOf(L_15_arg1, L_16_arg2)
+		end
+		L_12_.keyOf = function(L_18_arg1, L_19_arg2)
+			for L_20_forvar1, L_21_forvar2 in pairs(L_18_arg1) do
+				if L_21_forvar2 == L_19_arg2 then
+					return L_20_forvar1
+				end
+			end
+			return nil
+		end
+		L_12_.insertAndGetIndexOf = function(L_22_arg1, L_23_arg2)
+			L_22_arg1[#L_22_arg1 + 1] = L_23_arg2
+			return #L_22_arg1
+		end
+		L_12_.skip = function(L_24_arg1, L_25_arg2)
+			return table.move(L_24_arg1, L_25_arg2 + 1, #L_24_arg1, 1, table.create(#L_24_arg1 - L_25_arg2))
+		end
+		L_12_.take = function(L_26_arg1, L_27_arg2)
+			return table.move(L_26_arg1, 1, L_27_arg2, 1, table.create(L_27_arg2))
+		end
+		L_12_.range = function(L_28_arg1, L_29_arg2, L_30_arg3)
+			return table.move(L_28_arg1, L_29_arg2, L_30_arg3, 1, table.create(L_30_arg3 - L_29_arg2 + 1))
+		end
+		L_12_.skipAndTake = function(L_31_arg1, L_32_arg2, L_33_arg3)
+			return table.move(L_31_arg1, L_32_arg2 + 1, L_32_arg2 + L_33_arg3, 1, table.create(L_33_arg3))
+		end
+		L_12_.random = function(L_34_arg1)
+			return L_34_arg1[L_10_:NextInteger(1, #L
